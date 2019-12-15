@@ -4,6 +4,8 @@ echo "git installed" >> /var/log/pki.log
 git clone https://github.com/OpenVPN/easy-rsa.git
 cd easy-rsa/easyrsa3
 region=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq .region -r)
+Server=$(aws ssm get-parameter --name /Pki/Server --region us-east-2  --query Parameter.Value --region $region)
+Client=$(aws ssm get-parameter --name /Pki/Client --region us-east-2  --query Parameter.Value --region $region)
 Cn=$(aws ssm get-parameter --name /Pki/CN --region us-east-2  --query Parameter.Value --region $region)
 Country=$(aws ssm get-parameter --name /Pki/Country --region us-east-2  --query Parameter.Value --region $region)
 Province=$(aws ssm get-parameter --name /Pki/Province --region us-east-2  --query Parameter.Value --region $region)
@@ -22,15 +24,15 @@ echo "vars copied and set" >> /var/log/pki.log
 cat vars >> /var/log/pki.log
 ./easyrsa init-pki
 ./easyrsa build-ca nopass
-./easyrsa build-server-full server nopass
-./easyrsa build-client-full client1.cert nopass
+./easyrsa build-server-full $Server nopass
+./easyrsa build-client-full $Client nopass
 echo "PKI, CA, certs built" >> /var/log/pki.log
 mkdir ~/certs
 cp pki/ca.crt ~/certs/
-cp pki/issued/server.crt ~/certs/
-cp pki/private/server.key ~/certs/
-cp pki/issued/client1.cert.crt ~/certs/
-cp pki/private/client1.cert.key ~/certs/
+cp pki/issued/$Server.crt ~/certs/
+cp pki/private/$Server.key ~/certs/
+cp pki/issued/$Client.crt ~/certs/
+cp pki/private/$Client.key ~/certs/
 cd ~/certs/
 instance_id=$(curl http://169.254.169.254/latest/meta-data/instance-id)
 echo "1" >> /var/log/pki.log
