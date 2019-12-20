@@ -45,8 +45,8 @@ echo "Variables set" >> /var/log/pki.log
 aws s3 mb s3://$bucketname --region $region
 aws s3 cp ~/certs s3://$bucketname/certs/ --recursive --acl private
 echo "S3 bucket creation and puts complete" >> /var/log/pki.log
-aws acm import-certificate --certificate file://server.crt --private-key file://server.key --certificate-chain file://ca.crt --region $region
-aws acm import-certificate --certificate file://client1.cert.crt --private-key file://client1.cert.key --certificate-chain file://ca.crt --region $region
+aws acm import-certificate --certificate file://$Server.crt --private-key file://$Server.key --certificate-chain file://ca.crt --region $region
+aws acm import-certificate --certificate file://$Client.crt --private-key file://$Client.key --certificate-chain file://ca.crt --region $region
 echo "Client and server certs uploaded to ACM" >> /var/log/pki.log
 aws ec2 stop-instances --instance-ids $instance_id --region $region
 echo EOS >> /var/log/pki.log
