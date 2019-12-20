@@ -4,14 +4,14 @@ echo "git installed" >> /var/log/pki.log
 git clone https://github.com/OpenVPN/easy-rsa.git
 cd easy-rsa/easyrsa3
 region=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq .region -r)
-Server=$(aws ssm get-parameter --name /Pki/Server --region us-east-2  --query Parameter.Value --region $region)
-Client=$(aws ssm get-parameter --name /Pki/Client --region us-east-2  --query Parameter.Value --region $region)
-Cn=$(aws ssm get-parameter --name /Pki/CN --region us-east-2  --query Parameter.Value --region $region)
-Country=$(aws ssm get-parameter --name /Pki/Country --region us-east-2  --query Parameter.Value --region $region)
-Province=$(aws ssm get-parameter --name /Pki/Province --region us-east-2  --query Parameter.Value --region $region)
-City=$(aws ssm get-parameter --name /Pki/City --region us-east-2  --query Parameter.Value --region $region)
-Email=$(aws ssm get-parameter --name /Pki/Email --region us-east-2  --query Parameter.Value --region $region)
-Ou=$(aws ssm get-parameter --name /Pki/OU --region us-east-2  --query Parameter.Value --region $region)
+Server=$(aws ssm get-parameter --name /Pki/Server --region us-east-2  --query Parameter.Value --region $region | sed 's/"//g')
+Client=$(aws ssm get-parameter --name /Pki/Client --region us-east-2  --query Parameter.Value --region $region | sed 's/"//g')
+Cn=$(aws ssm get-parameter --name /Pki/CN --region us-east-2  --query Parameter.Value --region $region | sed 's/"//g')
+Country=$(aws ssm get-parameter --name /Pki/Country --region us-east-2  --query Parameter.Value --region $region | sed 's/"//g')
+Province=$(aws ssm get-parameter --name /Pki/Province --region us-east-2  --query Parameter.Value --region $region | sed 's/"//g')
+City=$(aws ssm get-parameter --name /Pki/City --region us-east-2  --query Parameter.Value --region $region | sed 's/"//g')
+Email=$(aws ssm get-parameter --name /Pki/Email --region us-east-2  --query Parameter.Value --region $region | sed 's/"//g')
+Ou=$(aws ssm get-parameter --name /Pki/OU --region us-east-2  --query Parameter.Value --region $region | sed 's/"//g')
 cp vars.example vars
 echo "set_var EASYRSA_BATCH	   \"enabled"\" >> vars
 echo "set_var EASYRSA_REQ_CN     $Cn"  >> vars
