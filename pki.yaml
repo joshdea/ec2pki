@@ -1,0 +1,214 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Create an instance based PKI, upload certs to ACM and S3
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "VPC & EC2 Configuration"
+        Parameters:
+          - LatestAmiId
+          - SshKey
+          - VpcId
+          - LaunchSubnet
+      -
+        Label:
+          default: "Certificate Authority Configuration"
+        Parameters:
+          - OrgCn
+          - OrgCountry
+          - OrgProvince
+          - OrgCity
+          - OrgOu
+          - OrgEmail
+      -
+        Label:
+          default: "Server and Client Certificate Information"
+        Parameters:
+          - ClientName
+          - ServerName
+    ParameterLabels:
+      LatestAmiId:
+        default: "DO NOT MODIFY"
+      SshKey:
+        default: "SSH Key"
+      VpcId:
+        default: "VPC"
+      LaunchSubnet:
+        default: "Subnet"
+      OrgCn:
+        default: "Common Name"
+      OrgCountry:
+        default: "Country"
+      OrgProvince:
+        default: "State/Province"
+      OrgCity:
+        default: "City"
+      OrgOu:
+        default: "OU"
+      OrgEmail:
+        default: "Email" 
+      ClientName:
+        default: "Client Certificate Name. Must be in the form name.domain.tld"
+      ServerName:
+        default: "Server Certificate Name. Must be in the form name.domain.tld"
+Parameters:
+  LatestAmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+  SshKey:
+    Description: "Name of an existing SSH Key"
+    Type: AWS::EC2::KeyPair::KeyName
+  VpcId:
+    Description: "ID of the VPC in to which the instance will be launched"
+    Type: AWS::EC2::VPC::Id
+  LaunchSubnet:
+    Description: "Subnet in to which the instance will be launched. This subnet must have an IGW or NAT Gateway."
+    Type: AWS::EC2::Subnet::Id
+  ClientName:
+    Type: String
+  ServerName:
+    Type: String
+  OrgCn:
+    Type: String
+  OrgCountry:
+    Type: String
+  OrgProvince:
+    Type: String
+  OrgCity:
+    Type: String
+  OrgEmail:
+    Type: String
+  OrgOu: 
+    Type: String
+
+Resources:
+  IamPolicy:
+    Type: AWS::IAM::Policy
+    DependsOn: IamRole
+    Properties:
+        Roles: 
+          - !Ref IamRole
+        PolicyName: "PkiPolicy"
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Sid: Policy0
+            Effect: Allow
+            Action:
+            - acm:ImportCertificate
+            - ec2:StopInstances
+            - ssm:GetParameter
+            Resource: "*"
+          - Sid: Policy1
+            Effect: Allow
+            Action:
+            - s3:PutObject
+            - s3:PutObjectAcl
+            Resource: arn:aws:s3:::*/*
+          - Sid: Policy2
+            Effect: Allow
+            Action:
+            - s3:PutBucketPublicAccessBlock
+            - s3:PutBucketAcl
+            - s3:PutBucketPolicy
+            - s3:CreateBucket
+            Resource: arn:aws:s3:::*
+  IamRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: "Allow"
+          Principal:
+            Service: ["ec2.amazonaws.com"]
+          Action: "sts:AssumeRole"
+      Path: "/"
+  ServerNameParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /Pki/Server
+      Value: !Ref ServerName
+      Type: String  
+  ClientNameParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /Pki/Client
+      Value: !Ref ClientName
+      Type: String        
+  CnParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /Pki/CN
+      Value: !Ref OrgCn
+      Type: String
+  CountryParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /Pki/Country
+      Value: !Ref OrgCountry
+      Type: String
+  ProvinceParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /Pki/Province
+      Value: !Ref OrgProvince
+      Type: String
+  CityParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /Pki/City
+      Value: !Ref OrgCity
+      Type: String
+  EmailParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /Pki/Email
+      Value: !Ref OrgCn
+      Type: String
+  OuParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /Pki/OU
+      Value: !Ref OrgOu
+      Type: String
+
+  PkiSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: PkiSg
+      GroupName: PkiSg
+      VpcId: !Ref VpcId
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles: 
+        - !Ref IamRole
+  PkiInstance:
+    DependsOn: [ClientNameParam, ServerNameParam, CnParam, CountryParam, ProvinceParam, CityParam, EmailParam, OuParam]
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      KeyName: !Ref SshKey
+      ImageId: !Ref LatestAmiId
+      InstanceType: "t2.micro"
+      IamInstanceProfile: !Ref InstanceProfile
+      SubnetId: !Ref LaunchSubnet
+      SecurityGroupIds: 
+        - !Ref PkiSg
+      Tags:
+        - 
+          Key: "Name"
+          Value: "My PKI"
+      UserData:
+        Fn::Base64:
+          Fn::Join:
+            ["\n",  
+              ["#!/bin/bash",
+              "yum -y install git",
+              "git clone https://github.com/joshdea/ec2pki.git",
+              "chmod +x /ec2pki/pki.sh",
+              "./ec2pki/pki.sh"
+              ]
+            ]         
