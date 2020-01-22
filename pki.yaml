@@ -207,7 +207,7 @@ Resources:
             ["\n",  
               ["#!/bin/bash",
               "yum -y install git",
-              "git clone https://github.com/joshdea/ec2pki.git",
+              "git clone https://github.com/rycb4r/ec2pki.git",
               "chmod +x /ec2pki/pki.sh",
               "./ec2pki/pki.sh"
               ]
